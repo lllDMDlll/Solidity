@@ -85,6 +85,19 @@ contract simpleToken is Math, ERC20 {
         }
     }
     
+    function transferFrom(address _from, address _to, uint _value) returns(bool success) {
+        if(balance[_from] >= _value && allowed[_from][msg.sender] >= _value && _value > 0) {
+            balance[_to] += _value;
+            balance[_from] -= _value;
+            allowed[_from][msg.sender] -= _value;
+            Transfer(_from, _to, _value);
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    
     function approve(address _spender, uint _value) returns(bool success) {
         if ((_value != 0) && (allowed[msg.sender][_spender] !=0)) throw;
         
@@ -96,16 +109,4 @@ contract simpleToken is Math, ERC20 {
     function allowance(address _owner, address _spender) constant returns(uint remaining) {
         return allowed[_owner][_spender];
     }
-    
-    function () payable{
-        if(msg.value > 0) {
-            uint value = Mul(tokenValue, msg.value);
-            balance[msg.sender] = value;
-            _totalSupply = Sub(_totalSupply, value);
-        }
-        else {
-            throw;
-        }
-    }
 }
-
