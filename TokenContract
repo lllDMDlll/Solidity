@@ -8,15 +8,15 @@ contract Vault is Math {
     bool public isVault = false;
     
     BasicToken basicToken;
-    address basicAddress;
+    address vaultAddress;
     uint256 unlockedAtBlockNumber;
     
     uint public constant numBlocksLocked = 11111111; // calculate value of blocks to lock for desired amount of time
     
-    function Vault(address _basicAddress) internal {
+    function Vault(address _vaultAddress) internal {
         if (_basicAddress == 0) throw;
         basicToken = BasicToken(msg.sender);
-        basicAddress = _basicAddress;
+        vaultAddress = _vaultAddress;
         isVault = true;
         unlockedAtBlockNumber = safeAdd(block.number, numBlocksLocked);
     }
@@ -25,10 +25,10 @@ contract Vault is Math {
         // if someone tries to unlock too early...
         if (block.number < unlockedAtBlockNumber) throw;
         // fails if toTransfer is 0
-        if (!basicToken.transfer(basicAddress, basicToken.balanceOf(this))) throw;
+        if (!basicToken.transfer(vaultAddress, basicToken.balanceOf(this))) throw;
     }
     
-    // disallow payment since it is not for Ether
+    // Don't allow payment since it is not for Ether
     function () {throw;}
     
 }
@@ -38,6 +38,9 @@ contract BasicToken is Math, ERC20 {
     // flag that determines if address is for a real contract
     bool public isBasicToken = false;
     
+    // Address where team members will pull tokens from
+    address teamAddress;
+
     // Token Info
     string tokenName;
     string tokenSymbol;
@@ -49,6 +52,17 @@ contract BasicToken is Math, ERC20 {
     uint256 public constant vaultPercent = 15; //What percent is kept for owner (team members, investors, etc)
     uint256 public constant teamPercent = 10; //What percent is used by team for marketing, bug bounty, improvements, etc?
     uint256 public constant hundredPercent = 100;
+    
+    uint256 public constant startsAt = 4500000; //Starting block of crowdsale
+    uint256 public constant endsAt = 4657553; //Ending block of crowdsale. This is 1 month
+    
+    /** Crowdsale Time Signatures:
+     * 
+     * 1 hour: 212 blocks
+     * 1 day: 5082 blocks
+     * 1 week: 38,117 blocks
+     * 1 month: 157,553 blocks
+     */
     
     mapping (address => uint256) balances;
     mapping (address => mapping (address => uint256)) allowed;
