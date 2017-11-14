@@ -128,6 +128,56 @@ contract Crowdsale is Haltable, Math {
   function() payable {
     throw;
   }
+  
+  function tokenCalculations(uint _crowdfundPercent, uint _vaultPercent, uint _teamPercent, uint crowdfundRatio,
+                            uint crowdfundTokens, uint vaultRatio, uint vaultTokens, uint teamRatio, uint teamTokens) {
+      
+      crowdfundPercent = _crowdfundPercent;
+      vaultPercent = _vaultPercent;
+      teamPercent = _teamPercent;
+      
+      if(safeAdd(_crowdfundPercent, vaultPercent, teamPercent) > hundredPercent) {
+          throw;
+      }
+      
+      if(getState() == State.Prefunding) {
+          
+          //This calculation is not necessary, only included in case a separate crowdfund address is needed
+          crowdfundRatio = safeDiv(_crowdfundPercent, hundredPercent);
+          crowdfundTokens = safeMul(crowdfundRatio, totalSupply);
+          
+          //Calculates amount of tokens to be preallocated to the vault
+          vaultRatio = safeDiv(_vaultPercent, hundredPercent);
+          vaultTokens = safeMul(vaultRatio, totalSupply);
+          
+          //Calculates amount of tokens to be preallocated to the team
+          teamRatio = safeDiv(_teamPercent, hundredPercent);
+          teamTokens = dafeMul(teamRatio, totalSupply);
+      }
+      
+      else {
+          throw;
+      }
+  }
+  
+  function tokenAllocations(uint _crowdfundTokens, uint _vaultTokens, uint _teamTokens, uint _teamAddress) {
+      
+      teamAddress = _teamAddress;
+      
+      crowdfundTokens = _crowdfundTokens;
+      vaultTokens = _vaultTokens;
+      teamTokens = _teamTokens;
+      
+      // Transfers tokens to vault and team addresses
+      if(getState() == State.Prefunding) {
+          //Vault
+          TokenContract.transferFrom(multisigWallet, _vaultAddress, _vaultTokens);
+          TokenContract.transferFrom(multisigWallet, _teamAddress, _teamTokens);
+      }
+      else {
+          throw;
+      }
+  }
 
   /**
    * Make an investment.
@@ -159,7 +209,7 @@ contract Crowdsale is Haltable, Math {
 
     // Account presale sales are separate from regular sales
     uint tokenAmount = crowdsalePricing.calculatePrice(weiAmount, weiRaised - presaleWeiRaised, tokensSold, tokensRemaining, msg.sender, token.decimals());
-    uint256 difference = safeSub(totalSupply, tokensSold);
+    uint difference = safeSub(totalSupply, tokensSold);
     
     //If we want crowdsale to stop at an exact number of tokens, last buyer gets whatever is left
     if(tokenAmount > difference) {
