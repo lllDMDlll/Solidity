@@ -7,7 +7,6 @@ pragma solidity ^0.4.8;
 
 import "./SafeMath.sol";
 import "./Haltable.sol";
-import "./CrowdsalePricing.sol";
 import "./ERC20.sol";
 import "./TokenContract.sol";
 
@@ -20,9 +19,6 @@ contract Crowdsale is Haltable, Math {
 
   /* The token we are selling */
   ERC20 public token;
-
-  /* How we are going to price our offering */
-  CrowdsalePricing public pricingStrategy;
 
   /* tokens will be transfered from this address */
   address public multisigWallet;
@@ -90,13 +86,11 @@ contract Crowdsale is Haltable, Math {
     // Crowdsale end time has been changed
     event EndAtChanged(uint newEndAt);
     
-    function Crowdsale(address _token, CrowdsalePricing _pricingStrategy, address _multisigWallet, uint _start, uint _end, uint _minimumFundingGoal) {
+    function Crowdsale(address _token, address _multisigWallet, uint _start, uint _end, uint _minimumFundingGoal) {
 
         owner = msg.sender;
 
         token = ERC20(_token);
-
-        setPricingStrategy(_pricingStrategy);
 
         multisigWallet = _multisigWallet;
         if(multisigWallet == 0) {
@@ -172,6 +166,8 @@ contract Crowdsale is Haltable, Math {
       if(getState() == State.Prefunding) {
           //Vault
           TokenContract.transferFrom(multisigWallet, _vaultAddress, _vaultTokens);
+          
+          //Team
           TokenContract.transferFrom(multisigWallet, _teamAddress, _teamTokens);
       }
       else {
@@ -279,6 +275,8 @@ contract Crowdsale is Haltable, Math {
    *
    */
   function preallocate(address receiver, uint fullTokens, uint weiPrice) public onlyOwner {
+    
+    weiPrice = 1000000000000000000; //This is 1 Ether in wei
 
     uint tokenAmount = safeMul(fullTokens, 10**token.decimals());
     uint weiAmount = safeMul(weiPrice, fullTokens); // This can be also 0, we give out tokens for free
@@ -342,42 +340,32 @@ contract Crowdsale is Haltable, Math {
     Whitelisted(addr, status);
   }
 
-  /**
-   * Allow crowdsale owner to close early or extend the crowdsale.
-   *
-   * This is useful e.g. for a manual soft cap implementation:
-   * - after X amount is reached determine manual closing
-   *
-   * This may put the crowdsale to an invalid state,
-   * but we trust owners know what they are doing.
-   *
-   */
-  function setEndsAt(uint time) onlyOwner {
-
-    if(now > time) {
-      throw; // Don't change past
-    }
-    
-    if(startsAt > time) {
-      throw; // Prevent human mistakes
-    }
-
-    endsAt = time;
-    EndsAtChanged(endsAt);
+  
+  function changePriceOne(uint blockNumber, uint newPrice) {
+      
+      blockNumber = block.number;
+      newPrice = 2000000000000000000; //Increase to 2 Ether
+      
+      if(blockNumber < firstChange) {
+          throw;
+      }
+      if(blockNumber >= secondChange) {
+          throw;
+      }
+      
+      weiPrice = newPrice;
   }
-
-  /**
-   * Allow to (re)set pricing strategy.
-   *
-   * Design choice: no state restrictions on the set, so that we can fix fat finger mistakes.
-   */
-  function setPricingStrategy(CrowdsalePricing _pricingStrategy) onlyOwner {
-    pricingStrategy = _pricingStrategy;
-
-    // Don't allow setting bad agent
-    if(!pricingStrategy.isPricingStrategy()) {
-      throw;
-    }
+  
+  function changePriceTwo(uint blockNumber, uint newPrice) {
+      
+      blockNumber = block.number;
+      newPrice = 3000000000000000000; //Increase to 3 Ether
+      
+      if(blockNumber < secondChange) {
+          throw;
+      }
+      
+      weiPrice = newPrice;
   }
 
   /**
@@ -448,7 +436,6 @@ contract Crowdsale is Haltable, Math {
     if(finalized) return State.Finalized;
     else if (address(finalizeAgent) == 0) return State.Preparing;
     else if (!finalizeAgent.isCorrect()) return State.Preparing;
-    else if (!pricingStrategy.isCorrect(address(this))) return State.Preparing;
     else if (block.timestamp < startsAt) return State.PreFunding;
     else if (block.timestamp <= endsAt && !isCrowdsaleFull()) return State.Funding;
     else if (isMinimumGoalReached()) return State.Success;
