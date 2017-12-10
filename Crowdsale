@@ -2,6 +2,7 @@
  *This smart contract is based on code from TokenMarket Ltd and is still undergoing editing.
  */
 
+
 pragma solidity ^0.4.8;
 
 import "./SafeMath.sol";
@@ -26,6 +27,9 @@ contract Crowdsale is Haltable, SafeMath {
   /* if the funding goal is not reached, investors may withdraw their funds */
   uint public minimumFundingGoal;
   
+  /* Price for whitelisted buyers */
+  uint public whitelistRate = 500;
+  
   /* First discount tier (tokens per ether), this is the base price*/
   uint public tierOnePrice = 450; 
   
@@ -36,20 +40,11 @@ contract Crowdsale is Haltable, SafeMath {
   /* Holds value of current block */
   uint public currentBlock = block.count;
   
-  /* First funding period price (tokens per ether)*/
-  uint public firstPeriodPrice = tierOnePrice;
-  
-  /* Second funding period price (tokens per ether)*/
-  uint public secondPeriodPrice = 400;
-  
-  /* Third funding period price (tokens per ether) */
-  uint public thirdPeriodPrice = 350;
-  
   /* Amount of Ether required for socond tier */
   uint public tierTwoRequirement = safeMul(10, decimals);
   
   /* Amount of Ether required for third tier */
-  uint public tierThreeRequirement = safeMult(50, decimals);
+  uint public tierThreeRequirement = safeMul(50, decimals);
 
   /* the number of tokens already sold through this contract*/
   uint public tokensSold = 0;
