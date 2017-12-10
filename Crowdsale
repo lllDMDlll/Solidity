@@ -1,8 +1,3 @@
-/**
- *This smart contract is based on code from TokenMarket Ltd and is still undergoing editing.
- */
-
-
 pragma solidity ^0.4.8;
 
 import "./SafeMath.sol";
@@ -10,21 +5,47 @@ import "./Haltable.sol";
 import "./ERC20.sol";
 import "./TokenContract.sol";
 
-contract Crowdsale is Haltable, Math {
-    
-    /* Max investment count when we are still allowed to change the multisig address */
-  uint public MAX_INVESTMENTS_BEFORE_MULTISIG_CHANGE = 5;
+contract Crowdsale is Haltable, SafeMath {
+  using SafeMath for uint256;
 
   using Math for uint;
+  
+  /* Max investment count when we are still allowed to change the multisig address */
+  uint public MAX_INVESTMENTS_BEFORE_MULTISIG_CHANGE = 5;
 
   /* The token we are selling */
-  ERC20 public token;
+  TokenContract public token;
 
   /* tokens will be transfered from this address */
   address public multisigWallet;
 
   /* if the funding goal is not reached, investors may withdraw their funds */
   uint public minimumFundingGoal;
+  
+  /* First discount tier (tokens per ether), this is the base price*/
+  uint public tierOnePrice = 450; 
+  
+  /* Second discount tier 10% bonus */
+  
+  /* First discount tier 15% bonus */
+  
+  /* Holds value of current block */
+  uint public currentBlock = block.count;
+  
+  /* First funding period price (tokens per ether)*/
+  uint public firstPeriodPrice = tierOnePrice;
+  
+  /* Second funding period price (tokens per ether)*/
+  uint public secondPeriodPrice = 400;
+  
+  /* Third funding period price (tokens per ether) */
+  uint public thirdPeriodPrice = 350;
+  
+  /* Amount of Ether required for socond tier */
+  uint public tierTwoRequirement = safeMul(10, decimals);
+  
+  /* Amount of Ether required for third tier */
+  uint public tierThreeRequirement = safeMult(50, decimals);
 
   /* the number of tokens already sold through this contract*/
   uint public tokensSold = 0;
@@ -45,7 +66,7 @@ contract Crowdsale is Haltable, Math {
   uint public weiRefunded = 0;
 
   /* Has this crowdsale been finalized */
-  bool public finalized;
+  bool public finalized = false;
 
   /** How much ETH each address has invested to this crowdsale */
   mapping (address => uint256) public investedAmountOf;
@@ -86,6 +107,9 @@ contract Crowdsale is Haltable, Math {
     // Crowdsale end time has been changed
     event EndAtChanged(uint newEndAt);
     
+    State public testState;
+    
+
     function Crowdsale(address _token, address _multisigWallet, uint _start, uint _end, uint _minimumFundingGoal) {
 
         owner = msg.sender;
@@ -201,11 +225,90 @@ contract Crowdsale is Haltable, Math {
       throw;
     }
 
+
     uint weiAmount = msg.value;
 
     // Account presale sales are separate from regular sales
-    uint tokenAmount = crowdsalePricing.calculatePrice(weiAmount, weiRaised - presaleWeiRaised, tokensSold, tokensRemaining, msg.sender, token.decimals());
-    uint difference = safeSub(totalSupply, tokensSold);
+    uint tokenAmount = 0;
+    uint tierTwoPrice = 0;
+    uint tierThreePrice = 0;
+    uint difference = safeSub(crowdfundTokens, tokensSold);
+    
+    /** This "if" statement handles all pricing for the crowdsale.
+     *  It updates the number of tokens per Ether based on 3 factors:
+     *      1. The status of the buyer (whether or not they are on 
+     *          the whitelist).
+     *      2. What period of the crowdsale during which the 
+     *          investment was made.
+     *      3. What tier the buyer's investment falls under, which
+     *          is determined by the amount of Ether he/she is 
+     *          investing.
+     **/
+     
+    if(whitelist[msg.sender]) {
+        tokenAmount = safeMul(weiAmount, whitelistRate);
+    }
+    
+    // handles investments for first period
+    else if(currentBlock < firstChange) {
+        
+        // 10% discount on first period price
+        tierTwoPrice = safeDiv(tierOnePrice, 10);
+        // 15% discount on first period price
+        tierThreePrice = safeDiv(tierOnePrice, 15);
+        
+        if(weiAmount < tierTwoRequirement) {
+            tokenAmount = safeMul(weiAmount, tierOnePrice);
+        }
+        else if(weiAmount > tierTwoRequirement && weiAmount <= tierThreeRequirement) {
+            tokenAmount = safeMul(weiAmount, tierTwoPrice);
+        }
+        else if(weiAmount >= tierThreeRequirement) {
+            tokenAmount = safeMul(weiAmount, tierThreePrice);
+        }
+    }
+    
+    // handles investments for second period
+    else if(currentBlock >= firstChange && currentBlock <= secondChange) {
+        
+        // Base price increases for second period
+        uint tierOnePriceTwo = 400;
+        // 10% discount on second period base price
+        tierTwoPrice = safeDiv(tierOnePriceTwo, 10);
+        // 15% discount on second period base price
+        tierThreePrice = safeDiv(tierOnePriceTwo, 15);
+        
+        if(weiAmount < tierTwoRequirement) {
+            tokenAmount = safeMul(weiAmount, tierOnePriceTwo);
+        }
+        else if(weiAmount > tierTwoRequirement && weiAmount <= tierThreeRequirement) {
+            tokenAmount = safeMul(weiAmount, tierTwoPrice);
+        }
+        else if(weiAmount >= tierThreeRequirement) {
+            tokenAmount = safeMul(weiAmount, tierThreePrice);
+        }
+    }
+    
+    // handles investments for third period
+    else if(currentBlock >= secondChange) {
+        
+        // Base price increases for third period
+        uint tierOnePriceThree = 350;
+        // 10% discount on third period base price
+        tierTwoPrice = safeDiv(tierOnePriceThree, 10);
+        // 15% discount on third period base price
+        tierThreePrice = safeDiv(tierOnePriceThree, 15);
+        
+        if(weiAmount < tierTwoRequirement) {
+            tokenAmount = safeMul(weiAmount, tierOnePriceThree);
+        }
+        else if(weiAmount > tierTwoRequirement && weiAmount <= tierThreeRequirement) {
+            tokenAmount = safeMul(weiAmount, tierTwoPrice);
+        }
+        else if(weiAmount >= tierThreeRequirement) {
+            tokenAmount = safeMul(weiAmount, tierThreePrice);
+        }
+    }
     
     //If we want crowdsale to stop at an exact number of tokens, last buyer gets whatever is left
     if(tokenAmount > difference) {
@@ -275,8 +378,8 @@ contract Crowdsale is Haltable, Math {
    *
    */
   function preallocate(address receiver, uint fullTokens, uint weiPrice) public onlyOwner {
-    
-    weiPrice = 1000000000000000000; //This is 1 Ether in wei
+      
+      
 
     uint tokenAmount = safeMul(fullTokens, 10**token.decimals());
     uint weiAmount = safeMul(weiPrice, fullTokens); // This can be also 0, we give out tokens for free
@@ -340,33 +443,6 @@ contract Crowdsale is Haltable, Math {
     Whitelisted(addr, status);
   }
 
-  
-  function changePriceOne(uint blockNumber, uint newPrice) {
-      
-      blockNumber = block.number;
-      newPrice = 2000000000000000000; //Increase to 2 Ether
-      
-      if(blockNumber < firstChange) {
-          throw;
-      }
-      if(blockNumber >= secondChange) {
-          throw;
-      }
-      
-      weiPrice = newPrice;
-  }
-  
-  function changePriceTwo(uint blockNumber, uint newPrice) {
-      
-      blockNumber = block.number;
-      newPrice = 3000000000000000000; //Increase to 3 Ether
-      
-      if(blockNumber < secondChange) {
-          throw;
-      }
-      
-      weiPrice = newPrice;
-  }
 
   /**
    * Allow to change the team multisig address in the case of emergency.
@@ -419,13 +495,7 @@ contract Crowdsale is Haltable, Math {
   function isMinimumGoalReached() public constant returns (bool reached) {
     return weiRaised >= minimumFundingGoal;
   }
-
-  /**
-   * Check if the contract relationship looks good.
-   */
-  function isPricingCorrect() public constant returns (bool correct) {
-    return pricingStrategy.isCorrect(address(this));
-  }
+  
 
   /**
    * Crowdfund state machine management.
