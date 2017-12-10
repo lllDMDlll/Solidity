@@ -1,3 +1,7 @@
+/**
+ *This smart contract is based on code from TokenMarket Ltd and is still undergoing editing.
+ */
+
 pragma solidity ^0.4.8;
 
 import "./SafeMath.sol";
