@@ -47,7 +47,7 @@ contract BasicToken is Math, ERC20 {
     address _owner;
     uint256 public constant totalSupply = 1000000;
     uint256 public constant tokenRatio = 50; //How many tokens per Ether? (exchange rate for crowdsale)
-    uint256 public constant decimals = 18; //Standard number (same as Ethereum)
+    uint256 public constant decimals = 10**18; //Standard number (breaks Ether down to wei)
     uint256 public constant crowdfundPercent = 75; //What percent of supply is in public crowdfund?
     uint256 public constant vaultPercent = 15; //What percent is kept for owner (team members, investors, etc)
     uint256 public constant teamPercent = 10; //What percent is used by team for marketing, bug bounty, improvements, etc?
@@ -63,6 +63,9 @@ contract BasicToken is Math, ERC20 {
      * 1 week: 38,117 blocks
      * 1 month: 157,553 blocks
      */
+     
+     uint256 public constant firstChange = 4538117; //Price change after 1 week
+     uint256 public constant secondChange = 4576234; //Price change after 2 weeks
     
     mapping (address => uint256) balances;
     mapping (address => mapping (address => uint256)) allowed;
