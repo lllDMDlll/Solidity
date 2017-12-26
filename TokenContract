@@ -3,54 +3,59 @@ pragma solidity ^0.4.8;
 import "./ERC20.sol";
 import "./SafeMath";
 
-contract Vault is Math {
-    
+
+contract TeamVault is SafeMath {
+
     bool public isVault = false;
-    
-    BasicToken basicToken;
-    address vaultAddress;
+
+    ArtbotToken artbotToken;
+    // Address where team members will pull tokens from.
+    address teamAddress;
     uint256 unlockedAtBlockNumber;
-    
-    uint public constant numBlocksLocked = 11111111; // calculate value of blocks to lock for desired amount of time
-    
-    function Vault(address _vaultAddress) internal {
-        if (_basicAddress == 0) throw;
-        basicToken = BasicToken(msg.sender);
-        vaultAddress = _vaultAddress;
+
+    uint public constant numBlocksLocked = 1111111; // calculate desired amount of time to lock tokens 
+
+    function TeamVault(address _teamAddress) internal {
+        if (_artbotAddress == 0) throw;
+        artbotToken = ArtbotToken(msg.sender);
+        teamAddress = _teamAddress;
         isVault = true;
         unlockedAtBlockNumber = safeAdd(block.number, numBlocksLocked);
     }
-    
+
     function unlock() external {
         // if someone tries to unlock too early...
         if (block.number < unlockedAtBlockNumber) throw;
         // fails if toTransfer is 0
-        if (!basicToken.transfer(vaultAddress, basicToken.balanceOf(this))) throw;
+        if (!artbotToken.transfer(teamAddress, artbotToken.balanceOf(this))) throw;
     }
-    
+
     // Don't allow payment since it is not for Ether
-    function () {throw;}
-    
+    function () {
+        throw;
+    }
+
 }
 
-contract BasicToken is Math, ERC20 {
+contract ArtbotToken is SafeMath, ERC20 {
     
     // flag that determines if address is for a real contract
-    bool public isBasicToken = false;
-    
-    // Address where team members will pull tokens from
-    address teamAddress;
+    bool public isArtbotToken = false;
+    address public investorAddress;
+    address public fundAddress;
 
     // Token Info
     string tokenName;
     string tokenSymbol;
     address _owner;
-    uint256 public constant totalSupply = 1000000;
-    uint256 public constant tokenRatio = 50; //How many tokens per Ether? (exchange rate for crowdsale)
+    uint256 public constant totalSupply = 1000000000;
+    uint256 public constant tokenRatio = 7400; //How many tokens per Ether? (exchange rate for crowdsale)
     uint256 public constant decimals = 10**18; //Standard number (breaks Ether down to wei)
-    uint256 public constant crowdfundPercent = 75; //What percent of supply is in public crowdfund?
-    uint256 public constant vaultPercent = 15; //What percent is kept for owner (team members, investors, etc)
-    uint256 public constant teamPercent = 10; //What percent is used by team for marketing, bug bounty, improvements, etc?
+    uint256 public constant presalePercent = 15; //What percent is made available for presale?
+    uint256 public constant crowdfundPercent = 60; //What percent of supply is in public crowdfund?
+    uint256 public constant investorPercent = 10; //What percent is set aside for advisors and early investors?
+    uint256 public constant fundPercent = 10; //Percent of tokens set aside to stabalize market if needed.
+    uint256 public constant teamPercent = 5; //What percent is put in the team member vault?
     uint256 public constant hundredPercent = 100;
     
     uint256 public constant startsAt = 4500000; //Starting block of crowdsale
@@ -70,13 +75,13 @@ contract BasicToken is Math, ERC20 {
     mapping (address => uint256) balances;
     mapping (address => mapping (address => uint256)) allowed;
     
-    address public basicToken;
-    Vault public timeVault; // Time-locked wallet
+    address public artbotToken;
+    TeamVault public timeVault; // Artbot's time-locked vault 
     
     
-    function basicToken(address _basicAddress) {
-        tokenName = 'Basic';
-        tokenSymbol = 'BAS';
+    function ArtbotToken() {
+        tokenName = 'Artbot';
+        tokenSymbol = 'ABT';
         _owner = msg.sender;
         balance[_owner] = _totalSupply;
     }
