@@ -8,7 +8,7 @@ contract TeamVault is SafeMath {
 
     bool public isVault = false;
 
-    ArtbotToken artbotToken;
+    Token token;
     // Address where team members will pull tokens from.
     address teamAddress;
     uint256 unlockedAtBlockNumber;
@@ -16,8 +16,8 @@ contract TeamVault is SafeMath {
     uint public constant numBlocksLocked = 1111111; // calculate desired amount of time to lock tokens 
 
     function TeamVault(address _teamAddress) internal {
-        if (_artbotAddress == 0) throw;
-        artbotToken = ArtbotToken(msg.sender);
+        if (_tokenAddress == 0) throw;
+        Token = Token(msg.sender);
         teamAddress = _teamAddress;
         isVault = true;
         unlockedAtBlockNumber = safeAdd(block.number, numBlocksLocked);
@@ -27,7 +27,7 @@ contract TeamVault is SafeMath {
         // if someone tries to unlock too early...
         if (block.number < unlockedAtBlockNumber) throw;
         // fails if toTransfer is 0
-        if (!artbotToken.transfer(teamAddress, artbotToken.balanceOf(this))) throw;
+        if (!Token.transfer(teamAddress, Token.balanceOf(this))) throw;
     }
 
     // Don't allow payment since it is not for Ether
@@ -37,10 +37,10 @@ contract TeamVault is SafeMath {
 
 }
 
-contract ArtbotToken is SafeMath, ERC20 {
+contract Token is SafeMath, ERC20 {
     
     // flag that determines if address is for a real contract
-    bool public isArtbotToken = false;
+    bool public isToken = false;
     address public investorAddress;
     address public fundAddress;
 
@@ -75,13 +75,13 @@ contract ArtbotToken is SafeMath, ERC20 {
     mapping (address => uint256) balances;
     mapping (address => mapping (address => uint256)) allowed;
     
-    address public artbotToken;
-    TeamVault public timeVault; // Artbot's time-locked vault 
+    address public token;
+    TeamVault public timeVault; // time-locked vault 
     
     
-    function ArtbotToken() {
-        tokenName = 'Artbot';
-        tokenSymbol = 'ABT';
+    function Token() {
+        tokenName = 'Basic';
+        tokenSymbol = 'BSC';
         _owner = msg.sender;
         balance[_owner] = _totalSupply;
     }
