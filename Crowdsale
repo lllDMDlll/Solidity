@@ -108,7 +108,7 @@ contract Crowdsale is Haltable, SafeMath {
     
     State public testState;
 
-    function Crowdsale(address _artbotToken, address _multisigWallet, uint256 presaleStartsAt, uint256 _startsAt, uint256 _endsAt, uint256 _minimumFundingGoal) {
+    function Crowdsale(address _tokenAddress, address _multisigWallet, uint256 presaleStartsAt, uint256 _startsAt, uint256 _endsAt, uint256 _minimumFundingGoal) {
 
         require(_startsAt >= currentBlock);
         require(_presaleStartsAt >= currentBlock && _presaleStartsAt < _startsAt);
@@ -116,17 +116,17 @@ contract Crowdsale is Haltable, SafeMath {
         if(_multisigWallet == 0) {
           throw;
         }
-        if(_artbotToken == 0) {
+        if(_tokenAddress == 0) {
           throw;
         }
 
         owner = msg.sender;
-        token = TokenContract(_artbotToken);
+        token = TokenContract(_tokenAddress);
         presaleStartsAt = _presaleStartsAt;
         startsAt = _start;
         endsAt = _end;
         multisigWallet = _multisigWallet;
-        isArtbotToken = true;
+        isToken = true;
         timeVault = new TeamVault(_)
 
         // Minimum funding goal can be zero
